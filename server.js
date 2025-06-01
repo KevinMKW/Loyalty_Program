@@ -31,6 +31,25 @@ app.get('/', (req, res) => {
     res.send('MailerSend Email Relay Server is running. Use POST /send-email to send emails.');
 });
 
+// Health check endpoint
+app.get('/health', async (req, res) => {
+    try {
+        await pool.query('SELECT 1');
+        res.json({ 
+            status: 'healthy', 
+            database: 'connected',
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        res.status(500).json({ 
+            status: 'unhealthy', 
+            database: 'disconnected',
+            error: err.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // === CUSTOMER ROUTES ===
 
 // Register new customer
@@ -364,6 +383,19 @@ app.post('/send-email', async (req, res) => {
             details: error.message 
         });
     }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received. Shutting down gracefully...');
+    await pool.end();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('SIGINT received. Shutting down gracefully...');
+    await pool.end();
+    process.exit(0);
 });
 
 // Start the server
