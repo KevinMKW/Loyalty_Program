@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: elysian-loyalty-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: '@Admin2025'
+      POSTGRES_DB: elysian_loyalty
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./Database.sql:/docker-entrypoint-initdb.d/Database.sql
+    networks:
+      - elysian_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d elysian_loyalty"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: elysian-loyalty-app
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: '@Admin2025'
+      DB_NAME: elysian_loyalty
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - elysian_network
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+    postgres_data:
+      driver: local
+  
+networks:
+  elysian_network:
+    driver: bridge
